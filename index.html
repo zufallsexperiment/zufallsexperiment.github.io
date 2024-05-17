@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Würfelwürfe Simulieren</title>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- D3.js -->
+    <script src="https://d3js.org/d3.v6.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        #rollButton {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        #rollButton:hover {
+            background-color: #45a049;
+        }
+        .line {
+            fill: none;
+            stroke-width: 2;
+        }
+        .axis path,
+        .axis line {
+            fill: none;
+            shape-rendering: crispEdges;
+        }
+    </style>
+</head>
+<body>
+    <h1>Würfelwürfe Simulieren</h1>
+    <label for="numRolls">Anzahl der Würfelwürfe:</label>
+    <input type="number" id="numRolls" value="10" min="1" />
+    <button id="rollButton">Würfeln</button>
+    
+    <h2>Verteilung der Würfelwürfe</h2>
+    <canvas id="diceChart"></canvas>
+
+    <h2>Gesetz der großen Zahlen Demonstration</h2>
+    <svg width="960" height="500"></svg>
+
+    <script>
+        // Chart.js configuration
+        const ctx = document.getElementById("diceChart").getContext("2d");
+        let diceChart = new Chart(ctx, {
+            type: "bar",
+            data: {
+                labels: ["1", "2", "3", "4", "5", "6"],
+                datasets: [{
+                    label: "Anzahl der Würfe",
+                    data: [0, 0, 0, 0, 0, 0],
+                    backgroundColor: "rgba(75, 192, 192, 0.6)",
+                    borderColor: "rgba(75, 192, 192, 1)",
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+
+        // D3.js configuration
+        const width = 960;
+        const height = 500;
+        const margin = {top: 20, right: 20, bottom: 30, left: 50};
+
+        const x = d3.scaleLinear().range([margin.left, width - margin.right]);
+        const y = d3.scaleLinear().range([height - margin.bottom, margin.top]);
+
+        const line = d3.line()
+            .x((d, i) => x(i + 1))
+            .y(d => y(d));
+
+        const svg = d3.select("svg")
+            .attr("width", width)
+            .attr("height", height);
+
+        svg.append("text")
+            .attr("x", (width / 2))             
+            .attr("y", margin.top)
+            .attr("text-anchor", "middle")  
+            .style("font-size", "16px") 
+            .style("text-decoration", "underline")  
+            .text("Gesetz der großen Zahlen Demonstration");
+
+        svg.append("g")
+            .attr("class", "x axis")
+            .attr("transform", `translate(0,${height - margin.bottom})`);
+
+        svg.append("g")
+            .attr("class", "y axis")
+            .attr("transform", `translate(${margin.left},0)`);
+
+        svg.append("text")
+            .attr("transform", `translate(${width / 2},${height - margin.bottom / 3})`)
+            .style("text-anchor", "middle")
+            .text("Anzahl der Würfe");
+
+        svg.append("text")
+            .attr("transform", "rotate(-90)")
+            .attr("y", margin.left / 3)
+            .attr("x", 0 - (height / 2))
+            .style("text-anchor", "middle")
+            .text("Laufender Durchschnitt");
+
+        svg.append("circle").attr("cx", width - 200).attr("cy", 30).attr("r", 6).style("fill", "steelblue");
+        svg.append("text").attr("x", width - 180).attr("y", 30).text("Laufender Durchschnitt").style("font-size", "15px").attr("alignment-baseline", "middle");
+        svg.append("circle").attr("cx", width - 200).attr("cy", 60).attr("r", 6).style("fill", "red");
+        svg.append("text").attr("x", width - 180).attr("y", 60).text("Erwartungswert (3,5)").style("font-size", "15px").attr("alignment-baseline", "middle");
+
+        document.getElementById("rollButton").addEventListener("click", () => {
+            const numRolls = parseInt(document.getElementById("numRolls").value);
+            const results = [];
+            const runningMeans = [];
+
+            for (let i = 0; i < numRolls; i++) {
+                const roll = Math.floor(Math.random() * 6) + 1;
+                results.push(roll);
+                const mean = d3.mean(results);
+                runningMeans.push(mean);
+            }
+
+            const rollCounts = [0, 0, 0, 0, 0, 0];
+            results.forEach(roll => {
+                rollCounts[roll - 1]++;
+            });
+
+            diceChart.data.datasets[0].data = rollCounts;
+            diceChart.update();
+
+            x.domain([1, numRolls]);
+            y.domain([0, 6]);
+
+            svg.select(".x.axis").call(d3.axisBottom(x));
+            svg.select(".y.axis").call(d3.axisLeft(y));
+
+            svg.selectAll(".line-path").remove();
+            svg.append("path")
+                .datum(runningMeans)
+                .attr("class", "line line-path")
+                .attr("d", line)
+                .attr("stroke", "steelblue");
+
+            svg.selectAll(".expected-line").remove();
+            svg.append("line")
+                .attr("class", "expected-line")
+                .attr("x1", x(1))
+                .attr("y1", y(3.5))
+                .attr("x2", x(numRolls))
+                .attr("y2", y(3.5))
+                .attr("stroke", "red")
+                .attr("stroke-dasharray", "5,5");
+        });
+    </script>
+</body>
+</html>
